@@ -45,8 +45,8 @@ async def create_role(role: schemas.UserRoleCreate, token: Annotated[str | None,
         raise HTTPException(status_code=401, detail="token not found")
     
     token_data = utils.jwt_decrypt(token)
-    role = token_data.get("role")
-    if role != 2:
+    role_id = token_data.get("role")
+    if role_id != 2:
         raise HTTPException(status_code=403, detail="unauthorized")
     
     try:
@@ -184,9 +184,9 @@ async def delete_role(id: int, token: Annotated[str | None, Cookie()] = None, db
         raise HTTPException(status_code=403, detail="unauthorized")
     
     try:
-        crud.delete_user(db, id)
+        crud.delete_user_role(db, id)
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return {"message": "role updated successfully"}
+    return {"message": "role deleted successfully"}

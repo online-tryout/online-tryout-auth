@@ -157,15 +157,15 @@ class TestAuthRouter:
         response = client.post("api/auth/role", json=data)
 
         assert response.status_code == 200
-        assert response.json()["msesage"] == "role created successfully"
+        assert response.json()["message"] == "role created successfully"
 
     def test_fail_create_role_unauthorized(self, client, db_session):
-        client.post("api/auth/logout", json=data)
+        client.post("api/auth/logout")
         data = {
             "id": 9,
             "type": "Lecturer"
         }
-        response = client.post("api/auth/role")
+        response = client.post("api/auth/role", json=data)
 
         assert response.status_code == 401
         assert response.json()["detail"] == "token not found"
@@ -180,10 +180,26 @@ class TestAuthRouter:
             "id": 9,
             "type": "Lecturer"
         }
-        response = client.post("api/auth/role")
+        response = client.post("api/auth/role", json=data)
 
         assert response.status_code == 403
         assert response.json()["detail"] == "unauthorized"
+
+    def test_fail_create_role_already_exists(self, client, db_session):
+        data = {
+            "username": "admin",
+            "password": base64.b64encode(b"password").decode("ascii")
+        }
+        client.post("api/auth/login", json=data)
+
+        data = {
+            "id": 3,
+            "type": "Admin"
+        }
+        response = client.post("api/auth/role", json=data)
+
+        assert response.status_code == 409
+        assert response.json()["detail"] == "type already exists"
 
     def test_successful_login(self, client, db_session):
         data = {
@@ -256,6 +272,21 @@ class TestAuthRouter:
 
         assert response.status_code == 401
         assert response.json()["detail"] == "token not found"
+
+    def test_fail_update_info_trying_to_update_role(self, client, db_session):
+        data = {
+            "username": "test_user",
+            "password": base64.b64encode(b"password").decode("ascii")
+        }
+        client.post("api/auth/login", json=data)
+
+        data = {
+            "role": 2
+        }
+        response = client.post("api/auth/update_info", json=data)
+
+        assert response.status_code == 403
+        assert response.json()["detail"] == "role cannot be changed"
 
     def test_fail_update_info_user_not_found(self, client, db_session):
         data = {
@@ -367,11 +398,18 @@ class TestAuthRouter:
         data = {
             "type": "Banned User"
         }
-        response = client.post("api/auth/role/1", json=data)
+        response = client.post("api/auth/role/99", json=data)
 
-        assert response.status_code == 200
-        assert response.json()["message"] == "role updated successfully"
+        assert response.status_code == 404
+        
+        data = {
+            "id": 1,
+            "type": "Banned User"
+        }
+        response = client.post("api/auth/role/2", json=data)
 
+        assert response.status_code == 409
+        assert response.json()["detail"] == "id already exists"
 
     def test_logout(self, client, db_session):
         data = {
@@ -504,3 +542,52 @@ class TestAuthRouter:
 
         assert response.status_code == 401
         assert response.json()["detail"] == "token not found"
+
+    def test_success_delete_role(self, client, db_session):
+        data = {
+            "username": "admin",
+            "password": base64.b64encode(b"password").decode("ascii")
+        }
+        client.post("api/auth/login", json=data)
+
+        data = {
+            "id": 9,
+            "type": "Lecturer"
+        }
+        response = client.post("api/auth/role", json=data)
+
+        response = client.post("api/auth/role/9/delete")
+
+        assert response.status_code == 200
+        assert response.json()["message"] == "role deleted successfully"
+
+    def test_fail_delete_role(self, client, db_session):
+        client.post("api/auth/logout")
+
+        response = client.post("api/auth/role/9/delete")
+        assert response.status_code == 401
+
+        data = {
+            "username": "test_user",
+            "password": base64.b64encode(b"password").decode("ascii")
+        }
+        client.post("api/auth/login", json=data)
+
+        response = client.post("api/auth/role/9/delete")
+        assert response.status_code == 403
+
+        data = {
+            "username": "admin",
+            "password": base64.b64encode(b"password").decode("ascii")
+        }
+        client.post("api/auth/login", json=data)
+
+        response = client.post("api/auth/role/99/delete")
+        assert response.status_code == 404
+
+        response = client.post("api/auth/role/2/delete")
+        assert response.status_code == 403
+        assert response.json()["detail"] == "there are users with this role. please make sure this role is not still in use"
+
+
+
