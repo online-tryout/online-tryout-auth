@@ -143,6 +143,48 @@ class TestAuthRouter:
         assert response.status_code == 409
         assert response.json()["detail"] == "username already exists"
 
+    def test_successful_create_role(self, client, db_session):
+        data = {
+            "username": "admin",
+            "password": base64.b64encode(b"password").decode("ascii")
+        }
+        client.post("api/auth/login", json=data)
+
+        data = {
+            "id": 9,
+            "type": "Lecturer"
+        }
+        response = client.post("api/auth/role", json=data)
+
+        assert response.status_code == 200
+        assert response.json()["msesage"] == "role created successfully"
+
+    def test_fail_create_role_unauthorized(self, client, db_session):
+        client.post("api/auth/logout", json=data)
+        data = {
+            "id": 9,
+            "type": "Lecturer"
+        }
+        response = client.post("api/auth/role")
+
+        assert response.status_code == 401
+        assert response.json()["detail"] == "token not found"
+
+        data = {
+            "username": "test_user",
+            "password": base64.b64encode(b"password").decode("ascii")
+        }
+        client.post("api/auth/login", json=data)
+
+        data = {
+            "id": 9,
+            "type": "Lecturer"
+        }
+        response = client.post("api/auth/role")
+
+        assert response.status_code == 403
+        assert response.json()["detail"] == "unauthorized"
+
     def test_successful_login(self, client, db_session):
         data = {
             "username": "test_user",
@@ -276,6 +318,60 @@ class TestAuthRouter:
 
         assert response.status_code == 403
         assert response.json()["detail"]== "id cannot be updated"
+
+    def test_successful_update_role(self, client, db_session):
+        data = {
+            "username": "admin",
+            "password": base64.b64encode(b"password").decode("ascii")
+        }
+        response = client.post("api/auth/login", json=data)
+
+        data = {
+            "type": "Banned User"
+        }
+        response = client.post("api/auth/role/1", json=data)
+        
+        assert response.status_code == 200
+        assert response.json()["message"] == "role updated successfully"
+
+    def test_fail_update_role(self, client, db_session):
+        client.post("api/auth/logout")
+        data = {
+            "type": "Banned User"
+        }
+        response = client.post("api/auth/role/1", json=data)
+
+        assert response.status_code == 401
+        assert response.json()["detail"] == "token not found"
+
+        data = {
+            "username": "test_user2",
+            "password": base64.b64encode(b"password").decode("ascii")
+        }
+        response = client.post("api/auth/login", json=data)
+
+        data = {
+            "type": "Banned User"
+        }
+        response = client.post("api/auth/role/1", json=data)
+
+        assert response.status_code == 403
+        assert response.json()["detail"] == "unauthorized"
+
+        data = {
+            "username": "admin",
+            "password": base64.b64encode(b"password").decode("ascii")
+        }
+        response = client.post("api/auth/login", json=data)
+
+        data = {
+            "type": "Banned User"
+        }
+        response = client.post("api/auth/role/1", json=data)
+
+        assert response.status_code == 200
+        assert response.json()["message"] == "role updated successfully"
+
 
     def test_logout(self, client, db_session):
         data = {
