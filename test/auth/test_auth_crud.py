@@ -24,14 +24,14 @@ def db_session(db_session_global):
     session.commit()
 
     data = {
-        "username": "test_user",
+        "name": "test_user",
         "email": "test@gmail.com",
         "password": hash_password("password"),
         "role": 1
     }
     user = User(**data)
     data = {
-        "username": "test_user2",
+        "name": "test_user2",
         "email": "test2@gmail.com",
         "password": hash_password("password"),
         "role": 1
@@ -52,31 +52,19 @@ def db_session(db_session_global):
 class TestAuthCRUD:
     def test_successful_register(self, db_session):
         data = {
-            "username": "new_user",
+            "name": "new_user",
             "email": "new_user@gmail.com",
             "password": hash_password("password"),
             "role": 1
         }
         result = create_user(db_session, User(**data))
 
-        assert result.username == "new_user"
+        assert result.name == "new_user"
         assert result.role == 1
-    
-    def test_fail_register_username_already_exists(self, db_session):
-        data = {
-            "username": "test_user",
-            "email": "test_user@gmail.com",
-            "password": hash_password("password"),
-            "role": 1
-        }
-
-        with pytest.raises(ValueError) as exc_info:
-            create_user(db_session, User(**data))
-        assert str(exc_info.value) == "username already exists"
 
     def test_fail_register_email_already_exists(self, db_session):
         data = {
-            "username": "test_user3",
+            "name": "test_user3",
             "email": "test@gmail.com",
             "password": hash_password("password"),
             "role": 1
@@ -107,7 +95,7 @@ class TestAuthCRUD:
         assert str(exc_info.value) == "type already exists"
 
     def test_successful_get_user(self, db_session):
-        user = db_session.query(User).filter(User.username == "test_user").first()
+        user = db_session.query(User).filter(User.name == "test_user").first()
         result = get_user(db_session, user.id)
 
         assert result == user
@@ -117,13 +105,13 @@ class TestAuthCRUD:
 
         assert result == None
 
-    def test_successful_get_user_by_username(self, db_session):
-        result = get_user_by_username(db_session, "test_user")
+    def test_successful_get_user_by_email(self, db_session):
+        result = get_user_by_email(db_session, "test@gmail.com")
 
-        assert result.username == "test_user"
+        assert result.email == "test@gmail.com"
 
-    def test_fail_get_user_by_username(self, db_session):
-        result = get_user_by_username(db_session, "non_existent_user")
+    def test_fail_get_user_by_email(self, db_session):
+        result = get_user_by_email(db_session, "whoami@gmail.com")
 
         assert result == None
 
@@ -143,36 +131,36 @@ class TestAuthCRUD:
         assert result.id == 2
 
     def test_successful_update_user(self, db_session):
-        user = db_session.query(User).filter(User.username == "test_user").first()
+        user = db_session.query(User).filter(User.name == "test_user").first()
         data = {
-            "username": "test_user_updated",
+            "name": "test_user_updated",
         }
         result = update_user(db_session, user.id, data)
 
-        assert result.username == "test_user_updated"
+        assert result.name == "test_user_updated"
 
-        updated_user = db_session.query(User).filter(User.username == "test_user_updated").first()
-        assert updated_user.username == "test_user_updated"
+        updated_user = db_session.query(User).filter(User.name == "test_user_updated").first()
+        assert updated_user.name == "test_user_updated"
 
 
     def test_fail_update_user_not_found(self, db_session):
         data = {
-            "username": "test_user",
+            "name": "test_user",
         }
 
         with pytest.raises(LookupError) as exc_info:
             update_user(db_session, uuid.uuid4(), data)
         assert str(exc_info.value) == "user not found"
 
-    def test_fail_update_user_username_already_registered(self, db_session):
-        user = db_session.query(User).filter(User.username == "test_user").first()
+    def test_fail_update_user_email_already_registered(self, db_session):
+        user = db_session.query(User).filter(User.email == "test@gmail.com").first()
         data = {
-            "username": "test_user2",
+            "email": "test2@gmail.com",
         }
 
         with pytest.raises(ValueError) as exc_info:
             update_user(db_session, user.id, data)
-        assert str(exc_info.value) == "username already exists"
+        assert str(exc_info.value) == "email already exists"
 
     def test_successful_update_role(self, db_session):
         role = db_session.query(UserRole).filter(UserRole.id == 1).first()
@@ -205,12 +193,12 @@ class TestAuthCRUD:
         assert str(exc_info.value) == "role not found"
 
     def test_successful_delete_user(self, db_session):
-        user = db_session.query(User).filter(User.username == "test_user").first()
+        user = db_session.query(User).filter(User.name == "test_user").first()
         result = delete_user(db_session, user.id)
 
         assert result == True
 
-        deleted_user = db_session.query(User).filter(User.username == "test_user").first()
+        deleted_user = db_session.query(User).filter(User.name == "test_user").first()
         assert deleted_user == None
 
     def test_fail_delete_user(self, db_session):

@@ -7,7 +7,7 @@ import re
 def create_user(db: Session, user: schemas.UserCreate):
     try:
         new_user = models.User(
-            username = user.username,
+            name = user.name,
             email = user.email,
             password = user.password,
             role = user.role
@@ -35,8 +35,8 @@ def create_user_role(db: Session, user_role: schemas.UserRoleCreate):
 def get_user(db: Session, user_id: uuid.UUID):
     return db.query(models.User).filter(models.User.id == user_id).first()
 
-def get_user_by_username(db: Session, username: str):
-    return db.query(models.User).filter(models.User.username == username).first()
+def get_user_by_email(db: Session, email: str):
+    return db.query(models.User).filter(models.User.email == email).first()
 
 def get_all_roles(db: Session):
     return db.query(models.UserRole).all()

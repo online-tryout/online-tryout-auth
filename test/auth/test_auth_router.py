@@ -24,21 +24,21 @@ def db_session(db_session_global):
     session.commit()
 
     data = {
-        "username": "test_user",
+        "name": "test_user",
         "email": "test@gmail.com",
         "password": hash_password("password"),
         "role": 1
     }
     user = User(**data)
     data = {
-        "username": "test_user2",
+        "name": "test_user2",
         "email": "test2@gmail.com",
         "password": hash_password("password"),
         "role": 1
     }
     user2 = User(**data)
     data = {
-        "username": "admin",
+        "name": "admin",
         "email": "admin@gmail.com",
         "password": hash_password("password"),
         "role": 2
@@ -60,7 +60,7 @@ def db_session(db_session_global):
 class TestAuthRouter:
     def test_successful_register_normal_user(self, client, db_session):
         data = {
-            "username": "new_user",
+            "name": "new_user",
             "email": "new_user@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii"),
             "role": 1
@@ -70,20 +70,20 @@ class TestAuthRouter:
         assert response.status_code == 200
         assert response.json()["message"] == "user registered successfully"
 
-        user = get_user_by_username(db_session, "new_user")
-        assert user.username == "new_user"
+        user = get_user_by_email(db_session, "new_user@gmail.com")
+        assert user.name == "new_user"
         assert user.role == 1
         assert user.password == hash_password("password")
 
     def test_successful_register_admin(self, client, db_session):
         data = {
-            "username": "admin",
+            "email": "admin@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         client.post("api/auth/login", json=data)
 
         data = {
-            "username": "new_admin",
+            "name": "new_admin",
             "email": "new_admin@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii"),
             "role": 2
@@ -93,15 +93,15 @@ class TestAuthRouter:
         assert response.status_code == 200
         assert response.json()["message"] == "user registered successfully"
 
-        user = get_user_by_username(db_session, "new_admin")
-        assert user.username == "new_admin"
+        user = get_user_by_email(db_session, "new_admin@gmail.com")
+        assert user.name == "new_admin"
         assert user.role == 2
         assert user.password == hash_password("password")
 
     def test_fail_register_admin_unauthorized_guest(self, client, db_session):
         client.post("api/auth/logout")
         data = {
-            "username": "new_admin",
+            "name": "new_admin",
             "email": "new_admin@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii"),
             "role": 2
@@ -114,13 +114,13 @@ class TestAuthRouter:
     def test_fail_register_admin_unauthorized_normal_user(self, client, db_session):
         client.post("api/auth/logout")
         data = {
-            "username": "test_user",
+            "email": "test@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
         
         data = {
-            "username": "new_admin",
+            "name": "new_admin",
             "email": "new_admin@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii"),
             "role": 2
@@ -130,9 +130,9 @@ class TestAuthRouter:
         assert response.status_code == 403
         assert response.json()["detail"] == "unauthorized"
     
-    def test_fail_register_username_already_exists(self, client, db_session):
+    def test_fail_register_name_already_exists(self, client, db_session):
         data = {
-            "username": "test_user2",
+            "name": "test_user2",
             "email": "test2@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii"),
             "role": 1
@@ -141,11 +141,11 @@ class TestAuthRouter:
         response = client.post("api/auth/register", json=data)
 
         assert response.status_code == 409
-        assert response.json()["detail"] == "username already exists"
+        assert response.json()["detail"] == "email already exists"
 
     def test_successful_create_role(self, client, db_session):
         data = {
-            "username": "admin",
+            "email": "admin@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         client.post("api/auth/login", json=data)
@@ -171,7 +171,7 @@ class TestAuthRouter:
         assert response.json()["detail"] == "token not found"
 
         data = {
-            "username": "test_user",
+            "email": "test@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         client.post("api/auth/login", json=data)
@@ -187,7 +187,7 @@ class TestAuthRouter:
 
     def test_fail_create_role_already_exists(self, client, db_session):
         data = {
-            "username": "admin",
+            "email": "admin@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         client.post("api/auth/login", json=data)
@@ -203,7 +203,7 @@ class TestAuthRouter:
 
     def test_successful_login(self, client, db_session):
         data = {
-            "username": "test_user",
+            "email": "test@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
@@ -217,13 +217,13 @@ class TestAuthRouter:
         assert type(info) == dict
         
         assert "id" in info.keys()
-        assert "username" in info.keys()
+        assert "name" in info.keys()
         assert "role" in info.keys()
-        assert info["username"] == "test_user"
+        assert info["name"] == "test_user"
 
     def test_fail_login_wrong_password(self, client, db_session):
         data = {
-            "username": "test_user",
+            "email": "test@gmail.com",
             "password": base64.b64encode(b"wrong_password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
@@ -233,7 +233,7 @@ class TestAuthRouter:
         
     def test_fail_login_user_not_found(self, client, db_session):
         data = {
-            "username": "not_registered_user",
+            "email": "whoami@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
@@ -243,7 +243,7 @@ class TestAuthRouter:
 
     def test_successful_update_info(self, client, db_session):
         data = {
-            "username": "test_user",
+            "email": "test@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
@@ -253,20 +253,20 @@ class TestAuthRouter:
         assert "token" in response.cookies
 
         data = {
-            "username": "new_username"
+            "name": "new_username"
         }
         response = client.post("api/auth/update_info", json=data)
 
         assert response.status_code == 200
         assert response.json()["message"] == "user updated successfully"
 
-        user = get_user_by_username(db_session, "new_username")
+        user = get_user_by_email(db_session, "test@gmail.com")
         assert user
 
     def test_fail_update_info_not_logged_in(self, client, db_session):
         client.cookies.clear()
         data = {
-            "username": "new_username"
+            "name": "new_username"
         }
         response = client.post("api/auth/update_info", json=data)
 
@@ -275,7 +275,7 @@ class TestAuthRouter:
 
     def test_fail_update_info_trying_to_update_role(self, client, db_session):
         data = {
-            "username": "test_user",
+            "email": "test@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         client.post("api/auth/login", json=data)
@@ -290,7 +290,7 @@ class TestAuthRouter:
 
     def test_fail_update_info_user_not_found(self, client, db_session):
         data = {
-            "username": "test_user",
+            "email": "test@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
@@ -305,16 +305,16 @@ class TestAuthRouter:
         delete_user(db_session, user_id)
 
         data = {
-            "username": "new_username"
+            "name": "new_username"
         }
         response = client.post("api/auth/update_info", json=data)
 
         assert response.status_code == 404
         assert response.json()["detail"] == "user not found"
 
-    def test_fail_update_info_username_already_exists(self, client, db_session):
+    def test_fail_update_info_email_already_exists(self, client, db_session):
         data = {
-            "username": "test_user",
+            "email": "test@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
@@ -324,16 +324,16 @@ class TestAuthRouter:
         assert "token" in response.cookies
 
         data = {
-            "username": "test_user2"
+            "email": "test2@gmail.com"
         }
         response = client.post("api/auth/update_info", json=data)
 
         assert response.status_code == 409
-        assert response.json()["detail"] == "username already exists"
+        assert response.json()["detail"] == "email already exists"
 
     def test_fail_update_info_invalid_data(self, client, db_session):
         data = {
-            "username": "test_user",
+            "email": "test@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
@@ -352,7 +352,7 @@ class TestAuthRouter:
 
     def test_successful_update_role(self, client, db_session):
         data = {
-            "username": "admin",
+            "email": "admin@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
@@ -376,7 +376,7 @@ class TestAuthRouter:
         assert response.json()["detail"] == "token not found"
 
         data = {
-            "username": "test_user2",
+            "email": "test@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
@@ -390,7 +390,7 @@ class TestAuthRouter:
         assert response.json()["detail"] == "unauthorized"
 
         data = {
-            "username": "admin",
+            "email": "admin@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
@@ -413,7 +413,7 @@ class TestAuthRouter:
 
     def test_logout(self, client, db_session):
         data = {
-            "username": "test_user",
+            "email": "test@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
@@ -430,7 +430,7 @@ class TestAuthRouter:
 
     def test_successful_delete_user(self, client, db_session):
         data = {
-            "username": "test_user",
+            "email": "test@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
@@ -446,12 +446,12 @@ class TestAuthRouter:
         assert "token" not in response.cookies
         assert "token" not in client.cookies
 
-        user = get_user_by_username(db_session, "test_user")
+        user = get_user_by_email(db_session, "test@gmail.com")
         assert user == None
 
     def test_fail_delete_user_not_found(self, client, db_session):
         data = {
-            "username": "test_user",
+            "email": "test@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
@@ -460,7 +460,7 @@ class TestAuthRouter:
         assert response.json()["message"] == "login successful"
         assert "token" in response.cookies
 
-        user = get_user_by_username(db_session, "test_user")
+        user = get_user_by_email(db_session, "test@gmail.com")
 
         delete_user(db_session, user.id)
 
@@ -478,7 +478,7 @@ class TestAuthRouter:
 
     def test_successful_delete_user_by_admin(self, client, db_session):
         data = {
-            "username": "admin",
+            "email": "admin@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
@@ -487,18 +487,18 @@ class TestAuthRouter:
         assert response.json()["message"] == "login successful"
         assert "token" in response.cookies
 
-        user = get_user_by_username(db_session, "test_user")
+        user = get_user_by_email(db_session, "test@gmail.com")
 
         response = client.post(f"api/auth/delete_user/{user.id}")
 
         assert response.status_code == 200
 
-        user = get_user_by_username(db_session, "test_user")
+        user = get_user_by_email(db_session, "test@gmail.com")
         assert user == None
 
     def test_fail_delete_user_by_admin_user_not_found(self, client, db_session):
         data = {
-            "username": "admin",
+            "email": "admin@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
@@ -507,7 +507,7 @@ class TestAuthRouter:
         assert response.json()["message"] == "login successful"
         assert "token" in response.cookies
 
-        user = get_user_by_username(db_session, "test_user")
+        user = get_user_by_email(db_session, "test@gmail.com")
 
         delete_user(db_session, user.id)
 
@@ -518,7 +518,7 @@ class TestAuthRouter:
 
     def test_fail_delete_user_by_admin_unauthorized(self, client, db_session):
         data = {
-            "username": "test_user",
+            "email": "test@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         response = client.post("api/auth/login", json=data)
@@ -527,7 +527,7 @@ class TestAuthRouter:
         assert response.json()["message"] == "login successful"
         assert "token" in response.cookies
 
-        user = get_user_by_username(db_session, "test_user")
+        user = get_user_by_email(db_session, "test@gmail.com")
 
         response = client.post(f"api/auth/delete_user/{user.id}")
 
@@ -536,7 +536,7 @@ class TestAuthRouter:
 
     def test_fail_delete_user_by_admin_no_token(self, client, db_session):
         client.cookies.clear()
-        user = get_user_by_username(db_session, "test_user")
+        user = get_user_by_email(db_session, "test@gmail.com")
 
         response = client.post(f"api/auth/delete_user/{user.id}")
 
@@ -545,7 +545,7 @@ class TestAuthRouter:
 
     def test_success_delete_role(self, client, db_session):
         data = {
-            "username": "admin",
+            "email": "admin@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         client.post("api/auth/login", json=data)
@@ -568,7 +568,7 @@ class TestAuthRouter:
         assert response.status_code == 401
 
         data = {
-            "username": "test_user",
+            "email": "test@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         client.post("api/auth/login", json=data)
@@ -577,7 +577,7 @@ class TestAuthRouter:
         assert response.status_code == 403
 
         data = {
-            "username": "admin",
+            "email": "admin@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii")
         }
         client.post("api/auth/login", json=data)

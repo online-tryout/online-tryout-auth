@@ -4,9 +4,10 @@ from typing import Optional
 import uuid
 
 class UserBase(BaseModel):
-    username: str
+    name: str
     email: EmailStr
     role: int
+    avatar: Optional[str] = ""
 
 class UserCreate(UserBase):
     password: str
