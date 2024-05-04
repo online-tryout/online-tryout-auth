@@ -7,7 +7,7 @@ from alembic import context
 
 from database import Base
 
-from auth.models import User
+from auth.models import User, UserRole
 
 import os
 from dotenv import load_dotenv

@@ -10,13 +10,11 @@ def test_token_scheme():
         "other_info": "other_info"
     }
 
-    exp =  datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=1)
-
-    token = create_token(secret, "user", exp)
+    token = jwt_encrypt(secret)
 
     assert type(token) == str
 
-    info = read_token(token)
+    info = jwt_decrypt(token)
 
     assert type(info) == dict
     assert "id" in info
@@ -28,26 +26,19 @@ def test_altered_token_scheme():
         "other_info": "other_info"
     }
 
-    exp =  datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=1)
-
-    token = create_token(secret, "user", exp)
+    token = jwt_encrypt(secret)
 
     payload = jwt_decrypt(token)
-    b64_encoded_data = payload.get("data")
-    decoded_data_bytes = base64.urlsafe_b64decode(b64_encoded_data)
-    decoded_data = decoded_data_bytes.decode().replace("\'", "\"")
+    payload["other_info"] = "altered_info"
 
-    data = json.loads(decoded_data)
+    header = {
+        "alg": "HS256",
+        "typ": "JWT"
+    }
+    token = jwt.encode(payload, "", algorithm='HS256', headers=header)
 
-    data['d1'] = "modified data"
-
-    encrypted_data = base64.urlsafe_b64encode(str({"d1": data['d1'], "d2": data['d2'], "d3": data['d3']}).encode()).decode()
-    token_payload = {"data": encrypted_data, "username": "user"}
-    tampered_token = jwt_encrypt(token_payload)
-
-    result = read_token(tampered_token)
-
-    assert result == False
+    with pytest.raises(jwt.InvalidSignatureError):
+        jwt_decrypt(token)
 
 def test_hash_password():
     password = "password"
