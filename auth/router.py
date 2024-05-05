@@ -15,18 +15,18 @@ router = APIRouter()
 
 @router.post("/register")
 async def register(user: schemas.UserCreate, token: Annotated[str | None, Cookie()] = None, db: Session = Depends(get_db)):
-    # if (user.role == 2) and not token:
-    #     raise HTTPException(status_code=401, detail="token not found")
+    if (user.role == 2) and not token:
+        raise HTTPException(status_code=401, detail="token not found")
     
-    # if (user.role == 2) and token:
-    #     try:
-    #         token_data = utils.jwt_decrypt(token)
-    #     except jwt.ExpiredSignatureError:
-    #         raise HTTPException(status_code=401, detail="token expired")
+    if (user.role == 2) and token:
+        try:
+            token_data = utils.jwt_decrypt(token)
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=401, detail="token expired")
         
-    #     role = token_data.get("role")
-    #     if role != 2:
-    #         raise HTTPException(status_code=403, detail="unauthorized")
+        role = token_data.get("role")
+        if role != 2:
+            raise HTTPException(status_code=403, detail="unauthorized")
 
     encoded_password = user.password
     decoded_password = base64.b64decode(encoded_password.encode("ascii")).decode("ascii")
@@ -41,13 +41,13 @@ async def register(user: schemas.UserCreate, token: Annotated[str | None, Cookie
     
 @router.post("/role")
 async def create_role(role: schemas.UserRoleCreate, token: Annotated[str | None, Cookie()] = None, db: Session = Depends(get_db)):
-    # if not token:
-    #     raise HTTPException(status_code=401, detail="token not found")
+    if not token:
+        raise HTTPException(status_code=401, detail="token not found")
     
-    # token_data = utils.jwt_decrypt(token)
-    # role_id = token_data.get("role")
-    # if role_id != 2:
-    #     raise HTTPException(status_code=403, detail="unauthorized")
+    token_data = utils.jwt_decrypt(token)
+    role_id = token_data.get("role")
+    if role_id != 2:
+        raise HTTPException(status_code=403, detail="unauthorized")
     
     try:
         crud.create_user_role(db, role)
