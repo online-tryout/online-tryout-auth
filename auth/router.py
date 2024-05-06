@@ -128,6 +128,12 @@ async def update_info(data: dict, token: Annotated[str | None, Cookie()] = None,
         raise HTTPException(status_code=401, detail="token expired")
 
     try:
+        if "password" in data.keys():
+            encoded_password = data["password"]
+            decoded_password = base64.b64decode(encoded_password.encode("ascii")).decode("ascii")
+            hashed_password = utils.hash_password(decoded_password)
+
+            data["password"] = hashed_password
         crud.update_user(db, user_id, data)
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
