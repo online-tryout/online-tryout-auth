@@ -18,8 +18,8 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    role_relationship = relationship("UserRole", back_populates="users")
-    role = Column(Integer, ForeignKey("userRole.id"))
+    role = relationship("UserRole", back_populates="users")
+    role_id = Column(Integer, ForeignKey("userRole.id"))
 
 class UserRole(Base):
     __tablename__ = "userRole"
@@ -27,4 +27,4 @@ class UserRole(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     type = Column(String, unique=True)
 
-    users = relationship("User", back_populates="role_relationship")
+    users = relationship("User", back_populates="role")

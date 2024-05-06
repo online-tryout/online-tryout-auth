@@ -10,24 +10,37 @@ import json
 import uuid
 import jwt
 import datetime
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 router = APIRouter()
 
 @router.post("/register")
 async def register(user: schemas.UserCreate, token: Annotated[str | None, Cookie()] = None, db: Session = Depends(get_db)):
-    if (user.role == 2) and not token:
+    superadmins = os.environ["SUPERADMINS"]
+    if user.email in superadmins:
+        return create_user(user, db)
+
+    role = crud.get_user_role_by_id(db, user.role_id)
+    if (role.type == "Admin") and not token:
         raise HTTPException(status_code=401, detail="token not found")
     
-    if (user.role == 2) and token:
+    if (role.type == "Admin") and token:
         try:
             token_data = utils.jwt_decrypt(token)
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="token expired")
         
-        role = token_data.get("role")
-        if role != 2:
+        user_role_id = token_data.get("role_id")
+        role = crud.get_user_role_by_id(db, user_role_id)
+        if role.type != "Admin":
             raise HTTPException(status_code=403, detail="unauthorized")
 
+    return create_user(user, db)
+    
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     encoded_password = user.password
     decoded_password = base64.b64decode(encoded_password.encode("ascii")).decode("ascii")
     hashed_password = utils.hash_password(decoded_password)
@@ -40,15 +53,23 @@ async def register(user: schemas.UserCreate, token: Annotated[str | None, Cookie
         raise HTTPException(status_code=409, detail=str(e))
     
 @router.post("/role")
-async def create_role(role: schemas.UserRoleCreate, token: Annotated[str | None, Cookie()] = None, db: Session = Depends(get_db)):
+async def register_role(role: schemas.UserRoleCreate, token: Annotated[str | None, Cookie()] = None, db: Session = Depends(get_db)):
+    superadmin_roles = os.environ["SUPERADMIN_ROLES"]
+    if role.type in superadmin_roles:
+        return create_role(role, db)
+    
     if not token:
         raise HTTPException(status_code=401, detail="token not found")
     
     token_data = utils.jwt_decrypt(token)
-    role_id = token_data.get("role")
-    if role_id != 2:
+    role_id = token_data.get("role_id")
+    user_role = crud.get_user_role_by_id(db, role_id)
+    if user_role.type != "Admin":
         raise HTTPException(status_code=403, detail="unauthorized")
     
+    return create_role(role, db)
+    
+def create_role(role: schemas.UserRoleCreate, db: Session = Depends(get_db)):
     try:
         crud.create_user_role(db, role)
         return {"message": "role created successfully"}
@@ -70,19 +91,31 @@ async def login(data: dict, response: Response, db: Session = Depends(get_db)):
     payload_info = {
         "id": str(user.id),
         "name": str(user.name),
-        "role": user.role,
+        "role_id": user.role_id,
         "exp": exp
     }
 
-    response.set_cookie(key = "token", value = utils.jwt_encrypt(payload_info))
-    return {"message": "login successful"}
+    token = utils.jwt_encrypt(payload_info)
+
+    response.set_cookie(key = "token", value = token)
+    
+    user_info = {
+        "avatar": user.avatar,
+        "createdAt": user.created_at,
+        "email": user.email,
+        "id": user.id,
+        "name": user.name,
+        "updatedAt": user.updated_at
+    }
+    
+    return {"user": user_info, "accessToken": token, "message": "login successful"}
 
 @router.post("/update_info")
 async def update_info(data: dict, token: Annotated[str | None, Cookie()] = None, db: Session = Depends(get_db)):
     if "id" in data:
         raise HTTPException(status_code=403, detail="id cannot be updated")
     
-    if "role" in data:
+    if "role_id" in data:
         raise HTTPException(status_code=403, detail="role cannot be changed")
     
     if not token:
@@ -112,8 +145,9 @@ async def update_role(id: int, data: dict, token: Annotated[str | None, Cookie()
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="token expired")
     
-    role = token_data.get("role")
-    if role != 2:
+    role_id = token_data.get("role_id")
+    role = crud.get_user_role_by_id(db, role_id)
+    if role.type != "Admin":
         raise HTTPException(status_code=403, detail="unauthorized")
     
     try:
@@ -155,11 +189,12 @@ async def delete_user_for_admin(id: uuid.UUID, token: Annotated[str | None, Cook
     
     try:
         token_data = utils.jwt_decrypt(token)
-        role = token_data.get("role")
+        role_id = token_data.get("role_id")
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="token expired")
-
-    if role != 2:
+    
+    role = crud.get_user_role_by_id(db, role_id)
+    if role.type != "Admin":
         raise HTTPException(status_code=403, detail="unauthorized")
     
     try:
@@ -176,11 +211,12 @@ async def delete_role(id: int, token: Annotated[str | None, Cookie()] = None, db
     
     try:
         token_data = utils.jwt_decrypt(token)
-        role = token_data.get("role")
+        role_id = token_data.get("role_id")
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="token expired")
 
-    if role != 2:
+    role = crud.get_user_role_by_id(db, role_id)
+    if role.type != "Admin":
         raise HTTPException(status_code=403, detail="unauthorized")
     
     try:

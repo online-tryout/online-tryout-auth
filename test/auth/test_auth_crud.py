@@ -27,14 +27,14 @@ def db_session(db_session_global):
         "name": "test_user",
         "email": "test@gmail.com",
         "password": hash_password("password"),
-        "role": 1
+        "role_id": 1
     }
     user = User(**data)
     data = {
         "name": "test_user2",
         "email": "test2@gmail.com",
         "password": hash_password("password"),
-        "role": 1
+        "role_id": 1
     }
     user2 = User(**data)
     session.add(user)
@@ -55,19 +55,19 @@ class TestAuthCRUD:
             "name": "new_user",
             "email": "new_user@gmail.com",
             "password": hash_password("password"),
-            "role": 1
+            "role_id": 1
         }
         result = create_user(db_session, User(**data))
 
         assert result.name == "new_user"
-        assert result.role == 1
+        assert result.role_id == 1
 
     def test_fail_register_email_already_exists(self, db_session):
         data = {
             "name": "test_user3",
             "email": "test@gmail.com",
             "password": hash_password("password"),
-            "role": 1
+            "role_id": 1
         }
 
         with pytest.raises(ValueError) as exc_info:

@@ -6,7 +6,7 @@ import uuid
 class UserBase(BaseModel):
     name: str
     email: EmailStr
-    role: int
+    role_id: int
     avatar: Optional[str] = ""
 
 class UserCreate(UserBase):

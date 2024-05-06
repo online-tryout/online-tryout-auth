@@ -27,21 +27,21 @@ def db_session(db_session_global):
         "name": "test_user",
         "email": "test@gmail.com",
         "password": hash_password("password"),
-        "role": 1
+        "role_id": 1
     }
     user = User(**data)
     data = {
         "name": "test_user2",
         "email": "test2@gmail.com",
         "password": hash_password("password"),
-        "role": 1
+        "role_id": 1
     }
     user2 = User(**data)
     data = {
         "name": "admin",
         "email": "admin@gmail.com",
         "password": hash_password("password"),
-        "role": 2
+        "role_id": 2
     }
     admin = User(**data)
     session.add(user)
@@ -63,7 +63,7 @@ class TestAuthRouter:
             "name": "new_user",
             "email": "new_user@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii"),
-            "role": 1
+            "role_id": 1
         }
         response = client.post("api/auth/register", json=data)
 
@@ -72,7 +72,7 @@ class TestAuthRouter:
 
         user = get_user_by_email(db_session, "new_user@gmail.com")
         assert user.name == "new_user"
-        assert user.role == 1
+        assert user.role_id == 1
         assert user.password == hash_password("password")
 
     def test_successful_register_admin(self, client, db_session):
@@ -86,7 +86,7 @@ class TestAuthRouter:
             "name": "new_admin",
             "email": "new_admin@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii"),
-            "role": 2
+            "role_id": 2
         }
         response = client.post("api/auth/register", json=data)
 
@@ -95,7 +95,7 @@ class TestAuthRouter:
 
         user = get_user_by_email(db_session, "new_admin@gmail.com")
         assert user.name == "new_admin"
-        assert user.role == 2
+        assert user.role_id == 2
         assert user.password == hash_password("password")
 
     def test_fail_register_admin_unauthorized_guest(self, client, db_session):
@@ -104,7 +104,7 @@ class TestAuthRouter:
             "name": "new_admin",
             "email": "new_admin@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii"),
-            "role": 2
+            "role_id": 2
         }
         response = client.post("api/auth/register", json=data)
 
@@ -123,7 +123,7 @@ class TestAuthRouter:
             "name": "new_admin",
             "email": "new_admin@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii"),
-            "role": 2
+            "role_id": 2
         }
         response = client.post("api/auth/register", json=data)
 
@@ -135,7 +135,7 @@ class TestAuthRouter:
             "name": "test_user2",
             "email": "test2@gmail.com",
             "password": base64.b64encode(b"password").decode("ascii"),
-            "role": 1
+            "role_id": 1
         }
 
         response = client.post("api/auth/register", json=data)
@@ -218,7 +218,7 @@ class TestAuthRouter:
         
         assert "id" in info.keys()
         assert "name" in info.keys()
-        assert "role" in info.keys()
+        assert "role_id" in info.keys()
         assert info["name"] == "test_user"
 
     def test_fail_login_wrong_password(self, client, db_session):
@@ -281,7 +281,7 @@ class TestAuthRouter:
         client.post("api/auth/login", json=data)
 
         data = {
-            "role": 2
+            "role_id": 2
         }
         response = client.post("api/auth/update_info", json=data)
 

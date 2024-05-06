@@ -10,7 +10,7 @@ def create_user(db: Session, user: schemas.UserCreate):
             name = user.name,
             email = user.email,
             password = user.password,
-            role = user.role
+            role_id = user.role_id
         )
         db.add(new_user)
         db.commit()
