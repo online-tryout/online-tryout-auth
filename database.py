@@ -9,7 +9,7 @@ load_dotenv()
 # SQLALCHEMY_DATABASE_URL = f"""
 # postgresql://{os.environ["USERNAME"]}:{os.environ["POSTGRES_PASSWORD"]}@localhost:5432/auth
 # """
-SQLALCHEMY_DATABASE_URL = os.environ["SUPABASE_DB_URL"]
+SQLALCHEMY_DATABASE_URL = os.environ["PUBLIC_DB_URL"]
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL.strip()
