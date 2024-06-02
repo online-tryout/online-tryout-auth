@@ -17,6 +17,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY_PROD }}
           port: 22
           script: |
-            cd /home/indra_mahaarta22/deployment-master
+            cd /home/indramhrt/deployment-master
             git pull origin main
             ./script/setup.sh
