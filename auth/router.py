@@ -110,6 +110,17 @@ async def login(data: dict, response: Response, db: Session = Depends(get_db)):
     
     return {"user": user_info, "accessToken": token, "message": "login successful"}
 
+@router.get("/verify_token")
+async def verify(token: Annotated[str | None, Cookie()] = None):
+    if not token:
+        raise HTTPException(status_code=401, detail="token not found")
+    
+    try:
+        token_data = utils.jwt_decrypt(token)
+        return {"message": "valid token", "data": token_data}
+    except:
+        raise HTTPException(status_code=403, detail="invalid token")
+    
 @router.post("/update_info")
 async def update_info(data: dict, token: Annotated[str | None, Cookie()] = None, db: Session = Depends(get_db)):
     if "id" in data:
