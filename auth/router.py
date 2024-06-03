@@ -110,6 +110,41 @@ async def login(data: dict, response: Response, db: Session = Depends(get_db)):
     
     return {"user": user_info, "accessToken": token, "message": "login successful"}
 
+@router.post("/login_admin")
+async def login_admin(data: dict, response: Response, db: Session = Depends(get_db)):
+    encoded_password = data.get("password")
+    decoded_password = base64.b64decode(encoded_password.encode("ascii")).decode("ascii")
+    hashed_password = utils.hash_password(decoded_password)
+
+    user = crud.get_user_by_email(db, data.get("email"))
+    user_role = crud.get_user_role_by_id(db, user.role_id)
+    if (not user) or (user.password != hashed_password) or (user_role.type != "Admin"):
+        raise HTTPException(status_code=401, detail="invalid credentials")
+    
+    exp =  datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=1)
+    
+    payload_info = {
+        "id": str(user.id),
+        "name": str(user.name),
+        "role_id": user.role_id,
+        "exp": exp
+    }
+
+    token = utils.jwt_encrypt(payload_info)
+
+    response.set_cookie(key = "token", value = token)
+    
+    user_info = {
+        "avatar": user.avatar,
+        "createdAt": user.created_at,
+        "email": user.email,
+        "id": user.id,
+        "name": user.name,
+        "updatedAt": user.updated_at
+    }
+    
+    return {"user": user_info, "accessToken": token, "message": "login successful"}
+    
 @router.get("/verify_token")
 async def verify(token: Annotated[str | None, Cookie()] = None):
     if not token:
@@ -120,7 +155,7 @@ async def verify(token: Annotated[str | None, Cookie()] = None):
         return {"message": "valid token", "data": token_data}
     except:
         raise HTTPException(status_code=403, detail="invalid token")
-    
+
 @router.post("/update_info")
 async def update_info(data: dict, token: Annotated[str | None, Cookie()] = None, db: Session = Depends(get_db)):
     if "id" in data:
